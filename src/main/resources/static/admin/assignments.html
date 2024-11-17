@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignments</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+        }
+        .assignment {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .assignment p {
+            margin: 5px 0;
+        }
+        .assignment button {
+            padding: 8px 12px;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .accept-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .reject-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        .status {
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            text-align: center;
+        }
+        .date {
+            color: #777;
+        }
+        .logout-btn {
+            margin-top: 20px;
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            display: block;
+            width: 100%;
+        }
+        .logout-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Assignments</h2>
+    <div id="assignments-list"></div>
+    <p id="error-message" class="error"></p>
+
+    <!-- Logout Button -->
+    <button class="logout-btn" onclick="logout()">Logout</button>
+</div>
+
+<script>
+    // Get the authToken and username from localStorage
+    const authToken = localStorage.getItem('authToken');
+    const username = localStorage.getItem('username');
+
+    // Ensure the user is logged in
+    if (!authToken || !username) {
+        window.location.href = '/admin/admin-login.html';  // Redirect to login if not logged in
+    }
+
+    // Logout function to clear localStorage and redirect to login page
+    function logout() {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('username');
+        window.location.href = '/admin/admin-login.html';  // Redirect to login page
+    }
+
+    // Fetch assignments for the logged-in admin (username is the query parameter)
+    async function fetchAssignments() {
+        try {
+            const response = await fetch(`/admin/dashboard/assignments?username=${username}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                displayAssignments(data.assignments);
+            } else {
+                const error = await response.text();
+                document.getElementById('error-message').innerText = `Error fetching assignments: ${error}`;
+            }
+        } catch (error) {
+            document.getElementById('error-message').innerText = `Error: ${error.message}`;
+        }
+    }
+
+    // Display the assignments on the page
+    function displayAssignments(assignments) {
+        const assignmentsList = document.getElementById('assignments-list');
+        assignmentsList.innerHTML = '';  // Clear previous list
+
+        if (assignments.length === 0) {
+            assignmentsList.innerHTML = '<p>No assignments available.</p>';
+            return;
+        }
+
+        assignments.forEach(assignment => {
+            const assignmentDiv = document.createElement('div');
+            assignmentDiv.classList.add('assignment');
+
+            // Format the createdAt date
+            const createdAt = new Date(assignment.createdAt);
+            const formattedDate = `${createdAt.toLocaleDateString()} ${createdAt.toLocaleTimeString()}`;
+
+            assignmentDiv.innerHTML = `
+                <p><strong>Task:</strong> ${assignment.task}</p>
+                <p><strong>Student (User ID):</strong> ${assignment.userId}</p>
+                <p><strong>Status:</strong> <span class="status">${assignment.status}</span></p>
+                <p class="date"><strong>Created At:</strong> ${formattedDate}</p>
+            `;
+
+            // If status is Pending, show Accept and Reject buttons
+            if (assignment.status === 'Pending') {
+                const acceptBtn = document.createElement('button');
+                acceptBtn.classList.add('accept-btn');
+                acceptBtn.innerText = 'Accept';
+                acceptBtn.onclick = () => updateAssignmentStatus(assignment.id, 'Accepted');
+
+                const rejectBtn = document.createElement('button');
+                rejectBtn.classList.add('reject-btn');
+                rejectBtn.innerText = 'Reject';
+                rejectBtn.onclick = () => updateAssignmentStatus(assignment.id, 'Rejected');
+
+                assignmentDiv.appendChild(acceptBtn);
+                assignmentDiv.appendChild(rejectBtn);
+            }
+
+            assignmentsList.appendChild(assignmentDiv);
+        });
+    }
+
+    // Update assignment status (Accept/Reject)
+    async function updateAssignmentStatus(assignmentId, newStatus) {
+        try {
+            const response = await fetch(`/admin/dashboard/assignments/${assignmentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: newStatus }),
+            });
+
+            if (response.ok) {
+                // Re-fetch assignments to show updated status
+                fetchAssignments();
+            } else {
+                const error = await response.text();
+                document.getElementById('error-message').innerText = `Error updating status: ${error}`;
+            }
+        } catch (error) {
+            document.getElementById('error-message').innerText = `Error: ${error.message}`;
+        }
+    }
+
+    // Fetch assignments when the page loads
+    fetchAssignments();
+</script>
+
+</body>
+</html>
