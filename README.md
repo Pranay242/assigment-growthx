@@ -82,7 +82,6 @@ The `admin` collection stores all admins. A typical admin document might look li
 - If you logged in as an admin, you can see all assigned assignments to you, then you Accept or Reject it.
 - Validations like, user exists, admin exists, wrong username/password are handled.
 - Please check out the demo video.
-- 
 ## Tech Stack
 - Springboot
 - Mongo
